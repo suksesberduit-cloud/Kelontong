@@ -1,0 +1,59 @@
+name: Build APK
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Siapkan folder web
+        run: |
+          mkdir www
+          cp index.html app.js sw.js manifest.json icon-*.png www/
+      - name: Scaffold Capacitor
+        run: |
+          npm init -y
+          npm i @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
+          npx cap init "Kelontong 20/80" id.kelontong.app --web-dir=www
+          npx cap add android
+          npx cap sync android
+      - name: Ikon dan versionCode
+        run: |
+          R=android/app/src/main/res
+          rm -rf $R/mipmap-anydpi-v26
+          for d in $R/mipmap-*; do
+            cp icon-192.png $d/ic_launcher.png
+            cp icon-192.png $d/ic_launcher_round.png
+            rm -f $d/ic_launcher_foreground.png
+          done
+          sed -i "s/versionCode 1/versionCode ${{ github.run_number }}/" android/app/build.gradle
+      - name: Build dan tanda tangan
+        env:
+          KS: ${{ secrets.KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.KS_PASS }}
+          KEY_PASS: ${{ secrets.KEY_PASS }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          cd android
+          if [ -n "$KS" ]; then
+            ./gradlew assembleRelease
+            echo "$KS" | base64 -d > ../release.jks
+            BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+            $BT/zipalign -p -f 4 app/build/outputs/apk/release/app-release-unsigned.apk ../aligned.apk
+            $BT/apksigner sign --ks ../release.jks --ks-pass env:KS_PASS --key-pass env:KEY_PASS --ks-key-alias "$KEY_ALIAS" --out ../Kelontong.apk ../aligned.apk
+          else
+            echo "PERINGATAN: keystore tidak ada, memakai debug build (tanda tangan berubah tiap build)"
+            ./gradlew assembleDebug
+            cp app/build/outputs/apk/debug/app-debug.apk ../Kelontong.apk
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Kelontong-APK
+          path: Kelontong.apk
