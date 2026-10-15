@@ -29,3 +29,6 @@ Pemilih tanggal kalender kustom (panah bulan/tahun), perbaikan janji bayar opsio
 
 ## Versi 6
 Ekspor via lembar Bagikan di APK (Filesystem+Share), simulasi Monte Carlo + target 20/80 di tab Ide.
+
+## Versi 7
+Efisiensi modal, modal minimum untuk 50/80/100% laba, skema Hemat modal di simulasi.
