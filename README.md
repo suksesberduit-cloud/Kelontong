@@ -35,3 +35,6 @@ Efisiensi modal, modal minimum untuk 50/80/100% laba, skema Hemat modal di simul
 
 ## Versi 8
 Rekomendasi pembagian modal per barang (persentase, Rp, unit) untuk skema terbaik.
+
+## Versi 7
+Ekspor JSON/CSV di APK kini membuka dialog simpan Android (pilih Download/penyimpanan internal) lewat plugin native `android-plugin/SaveFilePlugin.java`. Tombol "Bagikan Backup" tetap ada untuk kirim ke WhatsApp/Telegram. Workflow menyalin plugin + MainActivity.java saat build.
