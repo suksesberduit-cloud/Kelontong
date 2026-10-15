@@ -32,3 +32,6 @@ Ekspor via lembar Bagikan di APK (Filesystem+Share), simulasi Monte Carlo + targ
 
 ## Versi 7
 Efisiensi modal, modal minimum untuk 50/80/100% laba, skema Hemat modal di simulasi.
+
+## Versi 8
+Rekomendasi pembagian modal per barang (persentase, Rp, unit) untuk skema terbaik.
