@@ -20,7 +20,7 @@ jobs:
       - name: Scaffold Capacitor
         run: |
           npm init -y
-          npm i @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
+          npm i @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6 @capacitor/filesystem@6 @capacitor/share@6
           npx cap init "Kelontong 20/80" id.kelontong.app --web-dir=www
           npx cap add android
           npx cap sync android

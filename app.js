@@ -2,8 +2,8 @@ const $=s=>document.querySelector(s),esc=t=>String(t??'').replace(/[&<>"]/g,c=>(
 const rp=n=>'Rp'+Math.round(n).toLocaleString('id-ID'),uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const dd=(a,b)=>Math.round((Date.parse(a+'T00:00:00Z')-Date.parse(b+'T00:00:00Z'))/864e5);
-const S=['faktur','bayarFaktur','piutang','angsuran','expired','produk','gerak','jurnal','strategi','pikir','set'];let db,D={},tab='dash';
-const open=()=>new Promise((ok,no)=>{const r=indexedDB.open('kelontong',3);r.onupgradeneeded=()=>S.forEach(s=>{if(!r.result.objectStoreNames.contains(s))r.result.createObjectStore(s,{keyPath:'id'})});r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});
+const S=['faktur','bayarFaktur','piutang','angsuran','expired','produk','gerak','jurnal','strategi','pikir','set','target'];let db,D={},tab='dash';
+const open=()=>new Promise((ok,no)=>{const r=indexedDB.open('kelontong',4);r.onupgradeneeded=()=>S.forEach(s=>{if(!r.result.objectStoreNames.contains(s))r.result.createObjectStore(s,{keyPath:'id'})});r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});
 async function load(){for(const s of S)D[s]=await new Promise(r=>{const q=db.transaction(s).objectStore(s).getAll();q.onsuccess=()=>r(q.result)})}
 const save=ops=>new Promise((ok,no)=>{const t=db.transaction([...new Set(ops.map(o=>o[1]))],'readwrite');ops.forEach(([a,s,o])=>a=='put'?t.objectStore(s).put(o):t.objectStore(s).delete(o));t.oncomplete=async()=>{await load();render();ok()};t.onerror=t.onabort=()=>no(t.error||new Error('Penyimpanan gagal'))});
 function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;setTimeout(()=>t.hidden=true,3500)}
@@ -46,8 +46,11 @@ const delP=id=>confirm('Hapus piutang DAN seluruh riwayat angsurannya?')&&save([
 const addE=()=>form('Barang Kedaluwarsa',[['produk','Nama produk','text','required'],['qty','Jumlah','number','min=1 required'],['sat','Satuan','text','required value=pcs'],date('exp','Tanggal kedaluwarsa',null),['dist','Distributor','text'],money('hpp','Harga pokok per unit')],v=>save([['put','expired',{id:uid(),produk:v.produk.trim(),qty:+v.qty,sat:v.sat,exp:v.exp,dist:v.dist,hpp:+v.hpp,status:'belum',bentuk:'',ditemukan:today()}]]));
 const stE=id=>{const x=D.expired.find(e=>e.id==id);form('Ubah status retur',[['status','Status','select',Object.entries(SR)],['bentuk','Bentuk penyelesaian (wajib jika Selesai)','select',[['','—'],...Object.entries(BT)]]],v=>{if(v.status=='selesai'&&!v.bentuk)throw Error('Pilih bentuk penyelesaian');return save([['put','expired',{...x,status:v.status,bentuk:v.status=='selesai'?v.bentuk:''}]])})};
 const delE=id=>confirm('Hapus catatan ini?')&&save([['delete','expired',id]]).catch(e=>toast('Gagal: '+e.message));
-function dl(n,t,m){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:m}));a.download=n;a.click()}
-const expJ=()=>{dl('kelontong-backup-'+today()+'.json',JSON.stringify({app:'kelontong2080',v:1,data:D}),'application/json');localStorage.lastBackup=today();render()};
+async function dl(n,t,m){const C=window.Capacitor,P=C&&C.Plugins;
+if(C&&C.isNativePlatform&&C.isNativePlatform()){if(!(P&&P.Filesystem&&P.Share)){toast('Fitur simpan file tidak tersedia di aplikasi ini');return false}
+try{const r=await P.Filesystem.writeFile({path:n,data:t,directory:'CACHE',encoding:'utf8'});await P.Share.share({title:n,url:r.uri,dialogTitle:'Simpan atau kirim '+n});return true}catch(e){if(!/cancel/i.test(e.message||''))toast('Gagal menyimpan: '+(e.message||e));return false}}
+try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:m}));a.download=n;document.body.append(a);a.click();a.remove();return true}catch(e){toast('Gagal mengunduh: '+e.message);return false}}
+const expJ=async()=>{if(await dl('kelontong-backup-'+today()+'.json',JSON.stringify({app:'kelontong2080',v:1,data:D}),'application/json')){localStorage.lastBackup=today();render()}};
 async function impJ(f){try{const j=JSON.parse(await f.text());if(j.app!='kelontong2080'||!j.data||S.some(s=>j.data[s]!==undefined&&!Array.isArray(j.data[s])))throw Error('Format file tidak dikenali');
 if(!confirm('Impor: '+S.map(s=>s+' '+(j.data[s]||[]).length).join(', ')+'.\nSEMUA data saat ini akan DIGANTI. Lanjut?'))return;
 await save([...S.flatMap(s=>D[s].map(o=>['delete',s,o.id])),...S.flatMap(s=>(j.data[s]||[]).map(o=>['put',s,o]))]);toast('Impor berhasil')}catch(e){toast('Impor gagal: '+e.message)}}
@@ -108,6 +111,40 @@ if(t.dataset.n){const k=m+ +t.dataset.n;y+=Math.floor(k/12);m=((k%12)+12)%12;dra
 const set=v=>{h.value=v;b.textContent=v?dfmt(v):'Pilih tanggal';c.hidden=true};
 if(t.dataset.d)set(t.dataset.d);else if(t.dataset.a=='now')set(today());else if(t.dataset.a=='clr')set('');else c.hidden=true};
 draw();c.hidden=false}
+
+const fk=v=>v>=1e9?(v/1e9).toFixed(1)+' M':v>=1e6?(v/1e6).toFixed(1)+' jt':Math.round(v/1e3)+' rb';
+const mcS=()=>(D.set.find(x=>x.id=='mc')||{}).v,tAvg=x=>(x.qmin+x.qmax)/2,tMg=x=>x.jual-x.hpp;
+const MCC={'Fast moving':'#4cc38a','Prinsip 20/80':'#d4af37','Untung per item':'#5aa9ff','Merata (pembanding)':'#9aa8a0'};
+function mc(){const S0=mcS();if(!S0)return null;const it=D.target.filter(x=>x.st=='ada'&&tMg(x)>0&&x.qmax>0);if(!it.length)return null;
+let sd=12345;const rnd=()=>{sd=(sd*1664525+1013904223)>>>0;return sd/4294967296},W=S0.minggu,step=Math.max(1,Math.ceil(S0.putaran/7)),N=300,nm=w=>{const t=sum(w);return w.map(v=>v/t)};
+const sr=[...it].sort((a,b)=>tAvg(b)*tMg(b)-tAvg(a)*tMg(a)),k=Math.max(1,Math.round(it.length*.2));
+const st={'Fast moving':nm(it.map(tAvg)),'Prinsip 20/80':nm(it.map(x=>sr.indexOf(x)<k?.8/k:.2/Math.max(1,it.length-k))),'Untung per item':nm(it.map(tMg)),'Merata (pembanding)':nm(it.map(()=>1))};
+const q=(a,p)=>{const z=[...a].sort((x,y)=>x-y);return z[Math.floor(p*(z.length-1))]},res={};
+for(const n in st){const w=st[n],out=Array.from({length:W+1},()=>[]),hit=[];
+for(let r=0;r<N;r++){let M=S0.modal,h=null;out[0].push(M);for(let t=1;t<=W;t++){if(t%step==0){let p=0;it.forEach((x,i)=>{p+=Math.min((x.qmin+rnd()*(x.qmax-x.qmin))*step,w[i]*M/x.hpp)*tMg(x)});M+=p}out[t].push(M);if(h==null&&S0.tujuan>0&&M>=S0.tujuan)h=t}hit.push(h)}
+const hh=hit.filter(x=>x!=null);res[n]={p50:out.map(a=>q(a,.5)),p10:q(out[W],.1),p90:q(out[W],.9),pct:Math.round(hh.length/N*100),wk:hh.length>=N/2?q(hh,.5):null}}
+return{W,res}}
+const mcH=()=>{const S0=mcS(),head=`<div class=card><div class="row sp"><h3 style="margin:0">Simulasi Monte Carlo — akumulasi modal</h3><button class=g style="min-height:36px;flex:0 0 auto" onclick="setMC()">Atur simulasi</button></div>`,r=mc();
+if(!r)return head+'<div class=m style="margin-top:8px">Data belum cukup. Tekan Atur simulasi (isi modal awal) dan tambahkan minimal 1 barang target berstatus Tersedia dengan harga jual di atas harga beli.</div></div>';
+const nm=Object.keys(r.res),all=nm.flatMap(n=>r.res[n].p50),y0=Math.min(...all),y1=Math.max(...all),W=r.W,X=i=>40+i/W*290,Y=v=>170-(v-y0)/((y1-y0)||1)*150;
+const ln=nm.map(n=>`<polyline fill=none stroke="${MCC[n]}" stroke-width=2 ${n[0]=='M'?'stroke-dasharray="4 3"':''} points="${r.res[n].p50.map((v,i)=>X(i).toFixed(1)+','+Y(v).toFixed(1)).join(' ')}"/>`).join('');
+const gy=[0,.5,1].map(f=>{const v=y0+(y1-y0)*f;return`<line x1=40 x2=330 y1=${Y(v)} y2=${Y(v)} stroke="#ffffff1a"/><text x=36 y=${Y(v)+4} text-anchor=end font-size=10 fill="#9aa8a0">${fk(v)}</text>`}).join('');
+const gx=[0,.5,1].map(f=>`<text x=${X(W*f)} y=190 text-anchor=middle font-size=10 fill="#9aa8a0">mgg ${Math.round(W*f)}</text>`).join('');
+const best=nm.reduce((a,n)=>r.res[n].p50[W]>r.res[a].p50[W]?n:a,nm[0]);
+return head+`<svg viewBox="0 0 340 196" style="width:100%;margin-top:8px">${gy}${gx}${ln}</svg>`+nm.map(n=>{const o=r.res[n];return`<div style="margin:8px 0"><span style="color:${MCC[n]}">●</span> <b>${n}</b>${n==best?' <span class="b h">tertinggi</span>':''}<div class=m>Median akhir ${rp(o.p50[W])} • P10–P90: ${rp(o.p10)} – ${rp(o.p90)}${S0.tujuan>0?` • Target ${rp(S0.tujuan)}: ${o.wk?'minggu ke-'+o.wk+' ('+o.pct+'% simulasi)':'belum tercapai ('+o.pct+'% simulasi)'}`:''}</div></div>`}).join('')+'<div class=m>Simulasi 300 kali dari perkiraan terjual min–max yang kamu isi. Laba kotor diputar ulang sebagai modal, tanpa biaya operasional, kerugian kedaluwarsa, atau perubahan harga. Ini bukan ramalan.</div></div>'};
+const tgH=()=>`<h2 class=sec>Target barang 20/80</h2><button style="width:100%" onclick="addT()">+ Tambah Barang Target</button>`+(D.target.map(x=>`<div class=card><div class="row sp"><b>${esc(x.nama)}</b><span class="b ${x.st=='ada'?'h':'r'}">${x.st=='ada'?'Tersedia':'Tidak tersedia'}</span></div><div class=m>Beli ${rp(x.hpp)} • Jual ${rp(x.jual)} • Untung ${rp(tMg(x))}/unit (${x.jual>0?(tMg(x)/x.jual*100).toFixed(1):0}%)<br>Perkiraan terjual ${x.qmin}–${x.qmax}/minggu</div><div class=row style="margin-top:8px"><button class=g onclick="togT('${x.id}')">Ubah ketersediaan</button><button class=d onclick="del2('target','${x.id}')">Hapus</button></div></div>`).join('')||'<div class=e>Belum ada barang target.</div>');
+const advH=()=>{const L=D.target.filter(x=>tMg(x)>0),on=L.filter(x=>x.st=='ada'),c=x=>tAvg(x)*tMg(x),tot=sum(on.map(c)),a=[];if(!L.length)return'';
+[...on].sort((p,q)=>c(q)-c(p)).slice(0,Math.max(1,Math.round(on.length*.2))).forEach(x=>a.push(`Prioritaskan <b>${esc(x.nama)}</b>: ≈ ${rp(c(x))} laba kotor/minggu (${tot?Math.round(c(x)/tot*100):0}% dari total target tersedia). Pastikan stoknya selalu ada.`));
+L.filter(x=>x.st!='ada').forEach(x=>a.push(`<b>${esc(x.nama)}</b> tidak tersedia: potensi laba kotor ≈ ${rp(c(x))}/minggu belum terambil. Tantangan: cari distributor atau stok alternatif.`));
+on.filter(x=>tMg(x)/x.jual<.1).forEach(x=>a.push(`<b>${esc(x.nama)}</b> margin tipis (${(tMg(x)/x.jual*100).toFixed(1)}%). Tantangan: tawar harga beli atau tinjau harga jual.`));
+const md=l=>l.sort((p,q)=>p-q)[Math.floor(l.length/2)]||0,mm=md(on.map(x=>tMg(x)/x.jual)),vv=md(on.map(tAvg));
+on.filter(x=>tMg(x)/x.jual>mm&&tAvg(x)<vv).forEach(x=>a.push(`<b>${esc(x.nama)}</b> margin tinggi tapi volume rendah. Ide: tawarkan sebagai paket atau taruh di tempat yang mudah terlihat.`));
+const top=[...on].sort((p,q)=>c(q)-c(p))[0];if(top&&on.length>1&&tot&&c(top)/tot>.5)a.push(`Ketergantungan tinggi pada <b>${esc(top.nama)}</b> (${Math.round(c(top)/tot*100)}% laba target). Jika stok kosong, laba turun drastis.`);
+return`<h2 class=sec>Nasehat, ide, dan tantangan</h2>`+(a.map(t=>`<div class=card>${t}</div>`).join('')||'<div class=e>Belum ada saran.</div>')};
+const addT=()=>form('Barang Target',[['nama','Nama barang','text','required'],['hpp','Harga beli/unit (Rp)','rp',''],['jual','Harga jual/unit (Rp)','rp',''],['qmin','Perkiraan terjual/minggu — minimum','number','min=0 required'],['qmax','Perkiraan terjual/minggu — maksimum','number','min=0 required'],['st','Ketersediaan','select',[['ada','Tersedia'],['tidak','Tidak tersedia']]]],v=>{if(+v.qmax<+v.qmin)throw Error('Maksimum harus ≥ minimum');return save([['put','target',{id:uid(),nama:v.nama.trim(),hpp:v.hpp,jual:v.jual,qmin:+v.qmin,qmax:+v.qmax,st:v.st}]])});
+const togT=id=>{const x=D.target.find(t=>t.id==id);save([['put','target',{...x,st:x.st=='ada'?'tidak':'ada'}]]).catch(e=>toast(e.message))};
+const setMC=()=>{const s=mcS()||{};form('Atur simulasi',[['modal','Modal awal (Rp)','rp','',s.modal],['minggu','Lama simulasi (minggu)','number','min=4 max=104 required value='+(s.minggu||26)],['putaran','Putaran modal (hari sampai modal kembali)','number','min=1 max=60 required value='+(s.putaran||7)],['tujuan','Target modal (Rp, isi 0 jika tidak ada)','rp','z',s.tujuan]],v=>save([['put','set',{id:'mc',v:{modal:v.modal,minggu:+v.minggu,putaran:+v.putaran,tujuan:v.tujuan}}]]))};
+const ide0=V.ide;V.ide=()=>mcH()+tgH()+advH()+ide0();
 const sb=document.createElement('div');sb.id='sb';sb.innerHTML='<i></i>';document.body.append(sb);
 function sbU(){const h=document.documentElement,mx=h.scrollHeight-innerHeight;sb.style.display=mx>60?'block':'none';const tr=sb.clientHeight,th=Math.max(44,tr*innerHeight/h.scrollHeight);sb.firstChild.style.height=th+'px';sb.firstChild.style.top=(mx>0?scrollY/mx*(tr-th):0)+'px'}
 function sbM(e){const r=sb.getBoundingClientRect(),th=sb.firstChild.offsetHeight,p=Math.min(1,Math.max(0,(e.clientY-r.top-th/2)/(r.height-th)));scrollTo(0,p*(document.documentElement.scrollHeight-innerHeight))}

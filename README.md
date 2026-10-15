@@ -26,3 +26,6 @@ Workflow: .github/workflows/build-apk.yml (manual, Actions > Build APK > Run wor
 
 ## Versi 5
 Pemilih tanggal kalender kustom (panah bulan/tahun), perbaikan janji bayar opsional.
+
+## Versi 6
+Ekspor via lembar Bagikan di APK (Filesystem+Share), simulasi Monte Carlo + target 20/80 di tab Ide.
