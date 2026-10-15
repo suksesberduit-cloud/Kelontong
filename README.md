@@ -38,3 +38,6 @@ Rekomendasi pembagian modal per barang (persentase, Rp, unit) untuk skema terbai
 
 ## Versi 7
 Ekspor JSON/CSV di APK kini membuka dialog simpan Android (pilih Download/penyimpanan internal) lewat plugin native `android-plugin/SaveFilePlugin.java`. Tombol "Bagikan Backup" tetap ada untuk kirim ke WhatsApp/Telegram. Workflow menyalin plugin + MainActivity.java saat build.
+
+## Versi 9
+Tab baru "Cari" (di antara Exp dan Ide): daftar manual barang yang perlu dicari/disediakan karena kosong dari sales. Status: Belum dicari / Dalam proses / Sudah ada. Database naik ke versi 5 (data lama aman), ikut Backup/Impor/Hapus Semua.

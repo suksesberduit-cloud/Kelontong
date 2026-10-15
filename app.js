@@ -2,8 +2,8 @@ const $=s=>document.querySelector(s),esc=t=>String(t??'').replace(/[&<>"]/g,c=>(
 const rp=n=>'Rp'+Math.round(n).toLocaleString('id-ID'),uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const dd=(a,b)=>Math.round((Date.parse(a+'T00:00:00Z')-Date.parse(b+'T00:00:00Z'))/864e5);
-const S=['faktur','bayarFaktur','piutang','angsuran','expired','produk','gerak','jurnal','strategi','pikir','set','target'];let db,D={},tab='dash';
-const open=()=>new Promise((ok,no)=>{const r=indexedDB.open('kelontong',4);r.onupgradeneeded=()=>S.forEach(s=>{if(!r.result.objectStoreNames.contains(s))r.result.createObjectStore(s,{keyPath:'id'})});r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});
+const S=['faktur','bayarFaktur','piutang','angsuran','expired','produk','gerak','jurnal','strategi','pikir','set','target','cari'];let db,D={},tab='dash';
+const open=()=>new Promise((ok,no)=>{const r=indexedDB.open('kelontong',5);r.onupgradeneeded=()=>S.forEach(s=>{if(!r.result.objectStoreNames.contains(s))r.result.createObjectStore(s,{keyPath:'id'})});r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});
 async function load(){for(const s of S)D[s]=await new Promise(r=>{const q=db.transaction(s).objectStore(s).getAll();q.onsuccess=()=>r(q.result)})}
 const save=ops=>new Promise((ok,no)=>{const t=db.transaction([...new Set(ops.map(o=>o[1]))],'readwrite');ops.forEach(([a,s,o])=>a=='put'?t.objectStore(s).put(o):t.objectStore(s).delete(o));t.oncomplete=async()=>{await load();render();ok()};t.onerror=t.onabort=()=>no(t.error||new Error('Penyimpanan gagal'))});
 function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;setTimeout(()=>t.hidden=true,3500)}
@@ -22,8 +22,8 @@ return{total:sum(x.map(val)),belum:sum(sel('belum').map(val)),proses:sum(sel('pr
 const rem=()=>D.faktur.filter(f=>sisaF(f)>0&&[1,2].includes(dd(f.tempo,today()))).sort((a,b)=>a.tempo<b.tempo?-1:1);
 const remH=()=>rem().map(f=>`<div class=card style="border-color:var(--w)">🔔 <b>Reminder H-${dd(f.tempo,today())}:</b> nota ${esc(f.dist)} ${f.no?'No. '+esc(f.no):''} jatuh tempo ${f.tempo}, sisa <b>${rp(sisaF(f))}</b></div>`).join('');
 const go=t=>{tab=t;render()};
-function render(){const T=[['dash','🏠','Beranda'],['utang','📄','Utang'],['piutang','👥','Piutang'],['exp','⏳','Exp'],['ide','💡','Ide'],['lap','💾','Backup']];
-$('#nav').innerHTML=T.map(t=>`<button class="${t[0]==tab?'on':''}" onclick="go('${t[0]}')">${t[1]}<br>${t[2]}${t[0]=='utang'&&rem().length?' ('+rem().length+')':''}</button>`).join('');$('#v').innerHTML=V[tab]();requestAnimationFrame(()=>typeof sbU=='function'&&sbU())}
+function render(){const T=[['dash','🏠','Beranda'],['utang','📄','Utang'],['piutang','👥','Piutang'],['exp','⏳','Exp'],['cari','🔎','Cari'],['ide','💡','Ide'],['lap','💾','Backup']];
+$('#nav').innerHTML=T.map(t=>`<button class="${t[0]==tab?'on':''}" onclick="go('${t[0]}')">${t[1]}<br>${t[2]}${t[0]=='utang'&&rem().length?' ('+rem().length+')':''}${t[0]=='cari'&&cariN()?' ('+cariN()+')':''}</button>`).join('');$('#v').innerHTML=V[tab]();requestAnimationFrame(()=>typeof sbU=='function'&&sbU())}
 const V={dash(){const f=D.faktur.filter(x=>sisaF(x)>0),t=today(),by=n=>f.filter(x=>dd(x.tempo,t)==n),late=f.filter(x=>dd(x.tempo,t)<0),pc=D.piutang.filter(p=>p.status=='sah'&&sisaP(p)>0),e=exSum();
 const jt=pc.filter(p=>p.janji&&dd(p.janji,t)<=0),lb=!localStorage.lastBackup||dd(t,localStorage.lastBackup)>=7;
 return remH()+(D.faktur.length+D.piutang.length+D.expired.length&&lb?`<div class=card onclick="go('lap')" style="border-color:var(--w)">⚠️ Backup terakhir: ${localStorage.lastBackup||'belum pernah'}. Data hanya ada di HP ini — ketuk untuk backup.</div>`:'')+
@@ -161,5 +161,18 @@ function sbU(){const h=document.documentElement,mx=h.scrollHeight-innerHeight;sb
 function sbM(e){const r=sb.getBoundingClientRect(),th=sb.firstChild.offsetHeight,p=Math.min(1,Math.max(0,(e.clientY-r.top-th/2)/(r.height-th)));scrollTo(0,p*(document.documentElement.scrollHeight-innerHeight))}
 addEventListener('scroll',sbU,{passive:true});addEventListener('resize',sbU);
 sb.addEventListener('pointerdown',e=>{sb.setPointerCapture(e.pointerId);sbM(e)});sb.addEventListener('pointermove',e=>{if(sb.hasPointerCapture(e.pointerId))sbM(e)});
+
+/* ===== Tab CARI: daftar barang yang perlu dicari/disediakan ===== */
+const CS={belum:'Belum dicari',proses:'Dalam proses',done:'Sudah ada'},CB={belum:'r',proses:'y',done:'h'};let cf='aktif';
+const cariN=()=>(D.cari||[]).filter(x=>x.status!='done').length;
+V.cari=()=>{const L=D.cari||[],c=k=>L.filter(x=>x.status==k).length,F=[['aktif','Belum selesai ('+cariN()+')'],['belum','Belum ('+c('belum')+')'],['proses','Proses ('+c('proses')+')'],['done','Ada ('+c('done')+')'],['semua','Semua ('+L.length+')']],
+o={belum:0,proses:1,done:2},r=L.filter(x=>cf=='semua'||(cf=='aktif'?x.status!='done':x.status==cf)).sort((a,b)=>o[a.status]-o[b.status]||(a.dibuat<b.dibuat?1:-1));
+return`<button style="width:100%" onclick="addC()">+ Tambah Barang yang Dicari</button><div class=row style="margin-top:10px;gap:6px">`+F.map(f=>`<button class="${cf==f[0]?'':'g'}" style="font-size:12px;padding:0 6px;min-height:36px" onclick="cfS('${f[0]}')">${f[1]}</button>`).join('')+`</div>`+
+(r.map(x=>`<div class=card><div class="row sp"><b>${esc(x.nama)}</b><span class="b ${CB[x.status]}" style="flex:none">${CS[x.status]}</span></div><div class=m>${x.jml?'Butuh: '+esc(x.jml)+' • ':''}Dicatat ${x.tgl}${x.tglDone?' • Ada sejak '+x.tglDone:''}</div>${x.cat?`<div class=m style="margin-top:2px">${esc(x.cat)}</div>`:''}<div class=row style="margin-top:8px;gap:6px">`+Object.entries(CS).map(([k,l])=>`<button class="${x.status==k?'':'g'}" style="font-size:12px;padding:0 4px" onclick="stC('${x.id}','${k}')">${l}</button>`).join('')+`</div><div class=row style="margin-top:6px"><button class=g onclick="edC('${x.id}')">Ubah</button><button class=d onclick="delC('${x.id}')">Hapus</button></div></div>`).join('')||'<div class=e>'+(L.length?'Tidak ada barang di filter ini.':'Belum ada barang yang dicari. Catat barang yang kosong dari sales di sini.')+'</div>')};
+const cfS=k=>{cf=k;render()};
+const addC=()=>form('Barang yang Dicari',[['nama','Nama barang','text','required'],['jml','Butuh berapa (opsional)','text','placeholder="mis. 2 dus"'],['cat','Catatan (opsional)','text','placeholder="mis. sales kosong, coba toko grosir"'],['status','Status','select',Object.entries(CS)]],v=>save([['put','cari',{id:uid(),nama:v.nama.trim(),jml:v.jml.trim(),cat:v.cat.trim(),status:v.status,tgl:today(),tglDone:v.status=='done'?today():'',dibuat:new Date().toISOString()}]]));
+const edC=id=>{const x=D.cari.find(e=>e.id==id);form('Ubah Barang',[['nama','Nama barang','text','required value="'+esc(x.nama)+'"'],['jml','Butuh berapa (opsional)','text','value="'+esc(x.jml)+'"'],['cat','Catatan (opsional)','text','value="'+esc(x.cat)+'"']],v=>save([['put','cari',{...x,nama:v.nama.trim(),jml:v.jml.trim(),cat:v.cat.trim()}]]))};
+const stC=(id,st)=>{const x=D.cari.find(e=>e.id==id);if(!x||x.status==st)return;save([['put','cari',{...x,status:st,tglDone:st=='done'?today():''}]]).catch(e=>toast('Gagal: '+e.message))};
+const delC=id=>confirm('Hapus barang ini dari daftar cari?')&&save([['delete','cari',id]]).catch(e=>toast('Gagal: '+e.message));
 (async()=>{try{db=await open();await load();render();if(rem().length)toast('🔔 '+rem().length+' nota sales jatuh tempo dalam 1–2 hari')}catch(e){$('#v').innerHTML='<div class=e>Penyimpanan tidak tersedia: '+esc(e.message)+'</div>'}
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{})})();
