@@ -23,3 +23,6 @@ Kalender arus kas 14 hari (Beranda), alarm harga beli naik (Ide G), radar modal 
 
 ## Build APK
 Workflow: .github/workflows/build-apk.yml (manual, Actions > Build APK > Run workflow). Butuh secret KEYSTORE_BASE64, KS_PASS, KEY_PASS, KEY_ALIAS.
+
+## Versi 5
+Pemilih tanggal kalender kustom (panah bulan/tahun), perbaikan janji bayar opsional.
