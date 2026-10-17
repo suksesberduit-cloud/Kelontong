@@ -41,3 +41,6 @@ Ekspor JSON/CSV di APK kini membuka dialog simpan Android (pilih Download/penyim
 
 ## Versi 9
 Tab baru "Cari" (di antara Exp dan Ide): daftar manual barang yang perlu dicari/disediakan karena kosong dari sales. Status: Belum dicari / Dalam proses / Sudah ada. Database naik ke versi 5 (data lama aman), ikut Backup/Impor/Hapus Semua.
+
+## Versi 10
+Notifikasi lokal Android (plugin @capacitor/local-notifications): reminder nota jam 08.00 di H-2, H-1, dan hari jatuh tempo, tetap jalan saat app ditutup. Tab Backup punya tombol Tes Notifikasi. Badge angka di tab Utang/Cari. Hanya aktif di APK, bukan di browser.

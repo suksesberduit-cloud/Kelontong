@@ -5,7 +5,7 @@ const dd=(a,b)=>Math.round((Date.parse(a+'T00:00:00Z')-Date.parse(b+'T00:00:00Z'
 const S=['faktur','bayarFaktur','piutang','angsuran','expired','produk','gerak','jurnal','strategi','pikir','set','target','cari'];let db,D={},tab='dash';
 const open=()=>new Promise((ok,no)=>{const r=indexedDB.open('kelontong',5);r.onupgradeneeded=()=>S.forEach(s=>{if(!r.result.objectStoreNames.contains(s))r.result.createObjectStore(s,{keyPath:'id'})});r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});
 async function load(){for(const s of S)D[s]=await new Promise(r=>{const q=db.transaction(s).objectStore(s).getAll();q.onsuccess=()=>r(q.result)})}
-const save=ops=>new Promise((ok,no)=>{const t=db.transaction([...new Set(ops.map(o=>o[1]))],'readwrite');ops.forEach(([a,s,o])=>a=='put'?t.objectStore(s).put(o):t.objectStore(s).delete(o));t.oncomplete=async()=>{await load();render();ok()};t.onerror=t.onabort=()=>no(t.error||new Error('Penyimpanan gagal'))});
+const save=ops=>new Promise((ok,no)=>{const t=db.transaction([...new Set(ops.map(o=>o[1]))],'readwrite');ops.forEach(([a,s,o])=>a=='put'?t.objectStore(s).put(o):t.objectStore(s).delete(o));t.oncomplete=async()=>{await load();schedN(false);render();ok()};t.onerror=t.onabort=()=>no(t.error||new Error('Penyimpanan gagal'))});
 function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;setTimeout(()=>t.hidden=true,3500)}
 const closeM=()=>$('#modal').hidden=true;
 function info(h){$('#modal').innerHTML='<div>'+h+'<button class=g style="width:100%;margin-top:10px" onclick="closeM()">Tutup</button></div>';$('#modal').hidden=false}
@@ -21,9 +21,9 @@ function exSum(){const x=D.expired,sel=s=>x.filter(e=>e.status==s),sb=b=>x.filte
 return{total:sum(x.map(val)),belum:sum(sel('belum').map(val)),proses:sum(sel('proses').map(val)),setuju:sum(sel('disetujui').map(val)),ganti:sum(sb('ganti').map(val)),nota:sum(sb('nota').map(val)),tunai:sum(sb('tunai').map(val)),rugi:sum(sel('ditolak').map(val))+sum(sb('tidak').map(val))}}
 const rem=()=>D.faktur.filter(f=>sisaF(f)>0&&[1,2].includes(dd(f.tempo,today()))).sort((a,b)=>a.tempo<b.tempo?-1:1);
 const remH=()=>rem().map(f=>`<div class=card style="border-color:var(--w)">🔔 <b>Reminder H-${dd(f.tempo,today())}:</b> nota ${esc(f.dist)} ${f.no?'No. '+esc(f.no):''} jatuh tempo ${f.tempo}, sisa <b>${rp(sisaF(f))}</b></div>`).join('');
-const go=t=>{tab=t;render()};
+const go=t=>{tab=t;render()};const nb=k=>{const n=k=='utang'?rem().length:k=='cari'?cariN():0;return n?`<i class=nb>${n}</i>`:''};
 function render(){const T=[['dash','🏠','Beranda'],['utang','📄','Utang'],['piutang','👥','Piutang'],['exp','⏳','Exp'],['cari','🔎','Cari'],['ide','💡','Ide'],['lap','💾','Backup']];
-$('#nav').innerHTML=T.map(t=>`<button class="${t[0]==tab?'on':''}" onclick="go('${t[0]}')">${t[1]}<br>${t[2]}${t[0]=='utang'&&rem().length?' ('+rem().length+')':''}${t[0]=='cari'&&cariN()?' ('+cariN()+')':''}</button>`).join('');$('#v').innerHTML=V[tab]();requestAnimationFrame(()=>typeof sbU=='function'&&sbU())}
+$('#nav').innerHTML=T.map(t=>`<button class="${t[0]==tab?'on':''}" onclick="go('${t[0]}')">${nb(t[0])}${t[1]}<br>${t[2]}</button>`).join('');$('#v').innerHTML=V[tab]();requestAnimationFrame(()=>typeof sbU=='function'&&sbU())}
 const V={dash(){const f=D.faktur.filter(x=>sisaF(x)>0),t=today(),by=n=>f.filter(x=>dd(x.tempo,t)==n),late=f.filter(x=>dd(x.tempo,t)<0),pc=D.piutang.filter(p=>p.status=='sah'&&sisaP(p)>0),e=exSum();
 const jt=pc.filter(p=>p.janji&&dd(p.janji,t)<=0),lb=!localStorage.lastBackup||dd(t,localStorage.lastBackup)>=7;
 return remH()+(D.faktur.length+D.piutang.length+D.expired.length&&lb?`<div class=card onclick="go('lap')" style="border-color:var(--w)">⚠️ Backup terakhir: ${localStorage.lastBackup||'belum pernah'}. Data hanya ada di HP ini — ketuk untuk backup.</div>`:'')+
@@ -174,5 +174,22 @@ const addC=()=>form('Barang yang Dicari',[['nama','Nama barang','text','required
 const edC=id=>{const x=D.cari.find(e=>e.id==id);form('Ubah Barang',[['nama','Nama barang','text','required value="'+esc(x.nama)+'"'],['jml','Butuh berapa (opsional)','text','value="'+esc(x.jml)+'"'],['cat','Catatan (opsional)','text','value="'+esc(x.cat)+'"']],v=>save([['put','cari',{...x,nama:v.nama.trim(),jml:v.jml.trim(),cat:v.cat.trim()}]]))};
 const stC=(id,st)=>{const x=D.cari.find(e=>e.id==id);if(!x||x.status==st)return;save([['put','cari',{...x,status:st,tglDone:st=='done'?today():''}]]).catch(e=>toast('Gagal: '+e.message))};
 const delC=id=>confirm('Hapus barang ini dari daftar cari?')&&save([['delete','cari',id]]).catch(e=>toast('Gagal: '+e.message));
-(async()=>{try{db=await open();await load();render();if(rem().length)toast('🔔 '+rem().length+' nota sales jatuh tempo dalam 1–2 hari')}catch(e){$('#v').innerHTML='<div class=e>Penyimpanan tidak tersedia: '+esc(e.message)+'</div>'}
+
+/* ===== Notifikasi lokal Android (jalan walau layar mati / app ditutup) ===== */
+const LN=()=>{const C=window.Capacitor,P=C&&C.Plugins;return C&&C.isNativePlatform&&C.isNativePlatform()&&P&&P.LocalNotifications||null};
+const nid=t=>{let h=7;for(const c of t)h=(h*31+c.charCodeAt(0))|0;return Math.abs(h)%2000000000};
+async function nReady(ask){const n=LN();if(!n)return false;try{await n.createChannel({id:'nota',name:'Reminder nota',description:'Pengingat nota sales jatuh tempo',importance:4,visibility:1,vibration:true})}catch(e){}
+let p=await n.checkPermissions();if(p.display!='granted'&&ask)p=await n.requestPermissions();return p.display=='granted'}
+async function schedN(ask){try{if(!await nReady(ask))return;const n=LN();let old=[];try{old=JSON.parse(localStorage.nids||'[]')}catch(e){}
+if(old.length)await n.cancel({notifications:old.map(id=>({id}))});
+const now=Date.now(),L=[],ids=[];
+D.faktur.filter(f=>sisaF(f)>0).forEach(f=>[2,1,0].forEach(k=>{const[y,m,d]=f.tempo.split('-').map(Number),at=new Date(y,m-1,d-k,8,0,0);if(at<=now)return;const id=nid(f.id+'|'+k);ids.push(id);L.push({id,channelId:'nota',smallIcon:'ic_stat_kelontong',title:k==0?`Nota ${f.dist} jatuh tempo HARI INI`:`Nota ${f.dist} jatuh tempo ${k==1?'besok':'2 hari lagi'}`,body:`${f.no?'No. '+f.no+' • ':''}Sisa ${rp(sisaF(f))} • Tempo ${f.tempo}`,schedule:{at,allowWhileIdle:true}})}));
+if(L.length)await n.schedule({notifications:L});localStorage.nids=JSON.stringify(ids)}catch(e){}}
+async function nTest(sec){const n=LN();if(!n)return toast('Notifikasi hanya jalan di APK, belum didukung di browser/PWA.');
+if(!await nReady(true))return toast('Izin notifikasi ditolak. Aktifkan di Setelan HP > Aplikasi > Kelontong > Notifikasi.');
+try{await n.schedule({notifications:[{id:sec?999002:999001,channelId:'nota',smallIcon:'ic_stat_kelontong',title:'🔔 Tes notifikasi Kelontong',body:sec?'Berhasil! Notif muncul walau layar mati / app ditutup.':'Notifikasi langsung berfungsi.',...(sec?{schedule:{at:new Date(Date.now()+sec*1000),allowWhileIdle:true}}:{})}]});toast(sec?'Matikan layar atau keluar dari app. Notif muncul sekitar '+sec+' detik lagi.':'Notifikasi dikirim.')}catch(e){toast('Tes gagal: '+(e.message||e))}}
+async function nExact(){const n=LN();if(!n)return toast('Hanya tersedia di APK');try{const r=await n.checkExactNotificationSetting();if(r.exact_alarm=='granted')return toast('Alarm tepat waktu sudah diizinkan');await n.changeExactNotificationSetting()}catch(e){toast('Pengaturan ini tidak tersedia di HP kamu')}}
+const notifH=()=>{let c=0;try{c=JSON.parse(localStorage.nids||'[]').length}catch(e){}return`<div class=card><b>🔔 Notifikasi Reminder Nota</b><p class=m>${LN()?'Reminder nota otomatis dikirim jam 08.00 pada H-2, H-1, dan hari jatuh tempo, walau app ditutup. Terjadwal sekarang: <b>'+c+'</b> notifikasi.':'Notifikasi hanya aktif di aplikasi APK, bukan di browser.'}</p><div class=row><button onclick="nTest(0)">Tes Sekarang</button><button class=g onclick="nTest(15)">Tes 15 detik<br><small>(matikan layar)</small></button></div><div class=row style="margin-top:8px"><button class=g style="width:100%" onclick="nExact()">Izinkan alarm tepat waktu</button></div><p class=m>Kalau notif telat/tidak muncul saat app ditutup: Setelan HP &gt; Aplikasi &gt; Kelontong &gt; Mulai otomatis = ON, dan Hemat baterai = Tanpa batasan.</p></div>`};
+const lap0=V.lap;V.lap=()=>notifH()+lap0();
+(async()=>{try{db=await open();await load();render();schedN(true);if(rem().length)toast('🔔 '+rem().length+' nota sales jatuh tempo dalam 1–2 hari')}catch(e){$('#v').innerHTML='<div class=e>Penyimpanan tidak tersedia: '+esc(e.message)+'</div>'}
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{})})();
