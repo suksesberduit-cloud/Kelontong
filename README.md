@@ -44,3 +44,6 @@ Tab baru "Cari" (di antara Exp dan Ide): daftar manual barang yang perlu dicari/
 
 ## Versi 10
 Notifikasi lokal Android (plugin @capacitor/local-notifications): reminder nota jam 08.00 di H-2, H-1, dan hari jatuh tempo, tetap jalan saat app ditutup. Tab Backup punya tombol Tes Notifikasi. Badge angka di tab Utang/Cari. Hanya aktif di APK, bukan di browser.
+
+## Versi 11
+Fix: notifikasi yang sudah muncul tidak lagi terhapus saat app dibuka/disimpan (sebelumnya jadwal ulang ikut membatalkan notif yang sudah tampil). Notif tidak hilang saat diketuk (autoCancel off); setiap notif membuka app langsung ke tab Utang.
