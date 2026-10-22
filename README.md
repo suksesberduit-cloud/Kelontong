@@ -53,3 +53,6 @@ Reminder di tab Utang dan Beranda kini mencakup nota terlambat (H+1, H+2, dst), 
 
 ## Versi 13
 Jam notifikasi reminder nota bisa diatur (default 08.00) dan reminder otomatis bisa dimatikan, lewat kartu Notifikasi di tab Backup. Pengaturan disimpan di HP (bukan bagian file backup JSON).
+
+## Versi 14
+Banner reminder di tab Utang dan Beranda bisa diketuk: langsung pindah ke tab Utang, menggulir ke faktur yang dimaksud, dan faktur itu disorot (latar lebih gelap + garis emas). Ketuk notifikasi Android juga langsung menyorot fakturnya.
