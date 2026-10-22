@@ -50,3 +50,6 @@ Fix: notifikasi yang sudah muncul tidak lagi terhapus saat app dibuka/disimpan (
 
 ## Versi 12
 Reminder di tab Utang dan Beranda kini mencakup nota terlambat (H+1, H+2, dst), H+0, lalu H-1/H-2, urut dari yang paling mendesak; terlambat dan H+0 berwarna merah tebal. Notifikasi jam 08.00: H-2, H-1, H+0, dan tiap hari selama nota belum lunas (sampai 30 hari ke depan sejak app terakhir dibuka). Notif nota yang sudah dibayar ikut dihapus dari bar notifikasi.
+
+## Versi 13
+Jam notifikasi reminder nota bisa diatur (default 08.00) dan reminder otomatis bisa dimatikan, lewat kartu Notifikasi di tab Backup. Pengaturan disimpan di HP (bukan bagian file backup JSON).
