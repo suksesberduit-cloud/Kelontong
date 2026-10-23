@@ -56,3 +56,6 @@ Jam notifikasi reminder nota bisa diatur (default 08.00) dan reminder otomatis b
 
 ## Versi 14
 Banner reminder di tab Utang dan Beranda bisa diketuk: langsung pindah ke tab Utang, menggulir ke faktur yang dimaksud, dan faktur itu disorot (latar lebih gelap + garis emas). Ketuk notifikasi Android juga langsung menyorot fakturnya.
+
+## Versi 15
+Ikon aplikasi diperbesar: gambar dipotong ke area kotak dalam sehingga buku nota memenuhi ikon (icon-192.png dan icon-512.png). icon-maskable-512.png tidak diubah.
