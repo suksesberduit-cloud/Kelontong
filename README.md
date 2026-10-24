@@ -59,3 +59,6 @@ Banner reminder di tab Utang dan Beranda bisa diketuk: langsung pindah ke tab Ut
 
 ## Versi 15
 Ikon aplikasi diperbesar: gambar dipotong ke area kotak dalam sehingga buku nota memenuhi ikon (icon-192.png dan icon-512.png). icon-maskable-512.png tidak diubah.
+
+## Versi 16
+Perbaikan app berhenti saat dibuka: jadwal notifikasi dibatasi 200 alarm terdekat (batas Android 500), semua jadwal lama dibersihkan dulu tiap penjadwalan, dikirim bertahap 25 per panggilan. Ada pengaman: bila app berhenti saat menjadwalkan, penjadwalan dijeda di peluncuran berikutnya dan bisa dinyalakan lagi dari tab Backup (Jadwalkan ulang reminder).
